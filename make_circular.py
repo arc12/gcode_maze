@@ -1,12 +1,9 @@
-from gcode_maze import RectangularMazeMaker
+from gcode_maze import CircularMazeMaker
 
-maker = RectangularMazeMaker(rows=10, cols=20, end_type="side", centre_void=None, straight_on_bias=1, compass_bias={"N": 5})
+maker = CircularMazeMaker(layers=3, inner_layer_cells=6, centre_void=1)
 maker.make_maze()
-
-# output the gcode
-maker.make_gcode("maze.nc",
+maker.make_gcode("cmaze.nc",
                  step_size=5,  # mm
-                 origin_centre=True,
                  doc_steps=[0.5],  # maybe several passes
                  clearance_height=2,  # mm
                  spindle_speed=8200,  # RPM
