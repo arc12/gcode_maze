@@ -144,15 +144,13 @@ class MazeMakerBase(object):
 
 
 class RectangularMazeMaker(MazeMakerBase):
-    def __init__(self, rows, cols, cell_step, end_type="side", centre_void=None, straight_on_bias=0, compass_bias=None):
+    def __init__(self, rows, cols, end_type="side", centre_void=None, straight_on_bias=0, compass_bias=None):
         """
 
         :param rows:
         :type rows: int
         :param cols:
         :type cols: int
-        :param cell_step: mm for GCODE
-        :type cell_step:
         :param end_type: side or centre
         :type end_type: str
         :param centre_void: None or a tuple of rows, cols. if None and end_type is "centre" then a minimum size centre void will be created.
@@ -165,7 +163,6 @@ class RectangularMazeMaker(MazeMakerBase):
         MazeMakerBase.__init__(self)
         self.rows = rows
         self.cols = cols
-        self.cell_step = cell_step
         self.end_type = end_type
         self.centre_void = centre_void
         self.straight_on_bias = straight_on_bias
@@ -232,7 +229,7 @@ class RectangularMazeMaker(MazeMakerBase):
 
         :param file_path:
         :type file_path:
-        :param step_size:
+        :param step_size: mm for GCODE
         :type step_size:
         :param doc_steps:
         :type doc_steps:
@@ -251,7 +248,7 @@ class RectangularMazeMaker(MazeMakerBase):
         """
         # set origin - origin is in GCODE space (x, y)
         if origin_centre:
-            origin_offset = (self.cols - 1) / 2.0 * self.cell_step, (self.rows - 1) / 2.0 * self.cell_step
+            origin_offset = (self.cols - 1) / 2.0 * step_size, (self.rows - 1) / 2.0 * step_size
         else:
             origin_offset = (0, 0)
 
