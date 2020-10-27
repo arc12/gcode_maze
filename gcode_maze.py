@@ -101,6 +101,9 @@ class MazeMakerBase(object):
                 # step back
                 if backtracking:
                     self.stack.pop()
+        path_lengths = [len(p.steps) for p in self.paths]
+        print("{} paths with length stats: shortest={}, longest={}, median={:.1f}"
+              .format(len(path_lengths), min(path_lengths), max(path_lengths), np.median(path_lengths)))
 
     def _make_gcode(self, file_path, step_size, doc_steps, clearance_height, spindle_speed, plunge, feed, origin_offset=(0, 0)):
         """
@@ -123,40 +126,16 @@ class MazeMakerBase(object):
         :return:
         :rtype:
         """
-
-        # !! these better match check_points_all. increasing row = increasing Y (and col for X)
-        gcode_steps = {"N": "Y-{length}", "S": "Y{length}", "E": "X{length}", "W": "X-{length}",
-                       "A": "X{length} Y-{length}", "B": "X{length} Y{length}", "C": "X-{length} Y{length}", "D": "X-{length} Y-{length}"}
-
         start_gcode = ["G21", "G90", f"G0 X0 Y0 Z{clearance_height}", f"M3 S{spindle_speed}"]
-
-        def encode_rect_path(rect_path):
-            if len(rect_path.steps) > 0:
-                y, x = step_size * (rect_path.start_cell[0] - 1) - origin_offset[1], step_size * (rect_path.start_cell[1] - 1) - origin_offset[0]
-                gcode = ["G90", f"G0 Z{clearance_height}", f"G0 X{x} Y{y}", f"G1 Z{doc} F{plunge}", "G91", f"F{feed}"]
-                print(rect_path.steps)
-                for step in rect_path.steps:
-                    gcode.append("G1 " + gcode_steps[step[0]].format(length=step_size * (len(step))))
-                print(gcode)
-                # play it safe
-                gcode += ["G90", f"G0 Z{clearance_height}"]
-            else:
-                gcode = []
-
-            return gcode
 
         with open(file_path, "w") as f:
             # setup
             f.write('\n'.join(start_gcode))
             f.write('\n')
             # carve paths
-            path_type_rect = self.paths[0].steps[0] in "NSEW"
             for doc in doc_steps:
                 for p in self.paths:
-                    if path_type_rect:
-                        f.write('\n'.join(encode_rect_path(p)))
-                    else:
-                        pass  # circular
+                    f.write('\n'.join(self._encode_path(p, step_size, doc, clearance_height, plunge, feed, origin_offset)))  # in specialised class
                     f.write('\n')
                 # add a pause for dust clearance and quality checking
                 f.write("M0\n")
@@ -196,6 +175,9 @@ class RectangularMazeMaker(MazeMakerBase):
         self.check_points = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # row, col offsets in cells
         self.compass_points = "NSWE"  # order to match check_points
         self.dir_to_delta = {d: delta for (d, delta) in zip(self.compass_points, self.check_points)}
+        # !! these better match check_points_all. increasing row = increasing Y (and col for X)
+        self.gcode_steps = {"N": "Y-{length}", "S": "Y{length}", "E": "X{length}", "W": "X-{length}",
+                            "A": "X{length} Y-{length}", "B": "X{length} Y{length}", "C": "X-{length} Y{length}", "D": "X-{length} Y-{length}"}
 
     def make_maze(self):
         """
@@ -275,3 +257,17 @@ class RectangularMazeMaker(MazeMakerBase):
 
         self._make_gcode(file_path, step_size, doc_steps, clearance_height, spindle_speed, plunge, feed, origin_offset=origin_offset)
 
+    def _encode_path(self, rect_path, step_size, doc, clearance_height, plunge, feed, origin_offset):
+        if len(rect_path.steps) > 0:
+            y, x = step_size * (rect_path.start_cell[0] - 1) - origin_offset[1], step_size * (rect_path.start_cell[1] - 1) - origin_offset[0]
+            gcode = ["G90", f"G0 Z{clearance_height}", f"G0 X{x} Y{y}", f"G1 Z{doc} F{plunge}", "G91", f"F{feed}"]
+            # print(rect_path.steps)
+            for step in rect_path.steps:
+                gcode.append("G1 " + self.gcode_steps[step[0]].format(length=step_size * (len(step))))
+            # print(gcode)
+            # play it safe
+            gcode += ["G90", f"G0 Z{clearance_height}"]
+        else:
+            gcode = []
+
+        return gcode
